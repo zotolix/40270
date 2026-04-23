@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaborUniversitario</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"> </script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+<style>
+body{font-family:Arial;margin:0;background:#f5f5f5}
+header{background:#e06c1e90;color:#000000;padding:5px 10px;display:inline-block; border-radius:0 0 10px 0 ;text-align:left}
+.container{padding:15px}
+.sidebar{position:fixed;top:0;left:0;width:70px;height:100%;background:#333;color:#fff;display:flex;flex-direction:column;align-items:center;gap:15px;padding-top:20px}
+.sidebar button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
+.main{margin-left:80px}
+.lista-locales{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
+.local{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.1);cursor:pointer}
+.local img{width:100%;height:150px;object-fit:cover}
+.info{padding:10px}
+.mapa,.comentarios,.fotos{display:none;margin-top:20px;background:#fff;padding:15px;border-radius:10px}
+.mapa{height:300px;background:#ddd}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center}
+.modal-content{background:#fff;padding:20px;border-radius:10px;width:300px}
+input,textarea{width:100%;margin:5px 0;padding:8px}
+.btn{margin-top:10px;padding:10px;background:#9efd5e;color:#fff;border:none;border-radius:5px;cursor:pointer}
+.volver{display:none}
+.stars span{font-size:22px;cursor:pointer}
+</style>
+
+</head>
+<body>
+
+<div class="sidebar">
+<button onclick="abrirModal()"><img src="icono.svg" alt="Círculo SVG" width="30" height="30"></button>
+</div>
+
+<div class="main">
+<header><h1>SaborUniversitario</h1></header>
+<div class="container">
+
+<div class="lista-locales" id="lista"></div>
+<div id="mapa" class="mapa">Mapa (simulados)
+</div>
+<div id="comentarios" class="comentarios"></div>
+<div id="fotos" class="fotos"></div>
+
+<button class="btn" id="btnFotos" style="display:none">Ver fotos</button>
+<button class="btn" id="cerrarFotos" style="display:none">Cerrar fotos</button>
+<button class="btn volver" id="volverBtn">⬅ Volver</button>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+<div class="modal-content">
+
+<!-- PASSWORD -->
+<div id="bloquePassword">
+<h3>Acceso administrador</h3>
+<input id="password" type="password" placeholder="Contraseña">
+<button class="btn" onclick="validarPassword()">Ingresar</button>
+</div>
+
+<!-- FORMULARIO -->
+<div id="bloqueFormulario" style="display:none;">
+<h3>Registrar Local</h3>
+<input id="nombre" placeholder="Nombre">
+<input id="tipo" placeholder="Tipo de comida">
+<input id="direccion" placeholder="Dirección">
+<input id="precio" placeholder="Rango de precio">
+<input id="horario" placeholder="horario">
+<input id="pago" placeholder="metodo de pago">
+<input type="file" id="imagenes" multiple accept="image/*">
+<button class="btn" onclick="guardarLocal()">Guardar</button>
+</div>
+
+<button class="btn" onclick="cerrarModal()">Cerrar</button>
+
+</div>
+</div>
+
+<script>
+// ================== LOCAL STORAGE ==================
+function guardarEnStorage(){
+  localStorage.setItem('locales', JSON.stringify(locales));
+}
+
+function cargarStorage(){
+  const data = localStorage.getItem('locales');
+  if(data){ locales = JSON.parse(data); }
+}
+
+// ================== DATA ==================
+let locales=[
+{nombre:"Tacos El Güero",tipo:"Mexicana",precio:"$",cal:4.8,dist:"1 km",horario:"8am a 8pm",pago:"tarjeta y efectivo",comentarios:["Muy ricos"],fotos:["https://via.placeholder.com/100"], lat:19.543089715251895, lng:-96.92591016708481},
+];
+
+cargarStorage();
+locales.forEach(l => {
+  if(!l.horario){
+    l.horario = "No especificado";
+  }
+});
+
+let actual=null;
+
+// ================== ELEMENTOS ==================
+const lista=document.getElementById("lista");
+const mapa=document.getElementById("mapa");
+const comentariosDiv=document.getElementById("comentarios");
+const fotosDiv=document.getElementById("fotos");
+const btnFotos=document.getElementById("btnFotos");
+const cerrarFotos=document.getElementById("cerrarFotos");
+const volverBtn=document.getElementById("volverBtn");
+const modal=document.getElementById("modal");
+
+// ================== RENDER ==================
+function renderLocales(){
+lista.innerHTML="";
+locales.forEach((l,i)=>{
+const div=document.createElement("div");
+div.className="local";
+div.innerHTML=`
+<img src="${l.fotos[0]}">
+<div class="info">
+<h3>${l.nombre}</h3>
+<p>🍽️ ${l.tipo}</p>
+<p>💲 ${l.precio}</p>
+<p>⭐ ${l.cal}</p>
+<p>📍 ${l.dist}</p>
+<p>🕒 ${l.horario}</p>
+<p>💲 ${l.pago}</p> 
+</div>`;
+div.onclick=()=>mostrarDetalle(i);
+lista.appendChild(div);
+});
+}
+
+renderLocales();
+
+// ================== MODAL ==================
+function abrirModal(){
+  modal.style.display='flex';
+
+  document.getElementById('bloquePassword').style.display="block";
+  document.getElementById('bloqueFormulario').style.display="none";
+  document.getElementById('password').value="";
+}
+
+function cerrarModal(){modal.style.display='none';}
+
+// ================== VALIDAR PASSWORD ==================
+function validarPassword(){
+  const password = document.getElementById('password').value;
+  const ADMIN_PASS = "1234";
+
+  if(password === ADMIN_PASS){
+    document.getElementById('bloquePassword').style.display = "none";
+    document.getElementById('bloqueFormulario').style.display = "block";
+  } else {
+    alert("Contraseña incorrecta");
+  }
+}
+
+// ================== IMAGENES ==================
+function convertirImagenes(files){
+  return new Promise((resolve)=>{
+    let imagenes=[];
+    let count=0;
+
+    if(files.length===0) resolve(imagenes);
+
+    for(let i=0;i<files.length;i++){
+      const reader=new FileReader();
+      reader.onload=function(e){
+        imagenes.push(e.target.result);
+        count++;
+        if(count===files.length) resolve(imagenes);
+      };
+      reader.readAsDataURL(files[i]);
+    }
+  });
+}
+
+// ================== GUARDAR ==================
+async function guardarLocal(){
+const nombre=document.getElementById('nombre').value;
+const tipo=document.getElementById('tipo').value;
+const direccion=document.getElementById('direccion').value;
+const precio=document.getElementById('precio').value;
+const horario=document.getElementById('horario').value;
+const pago=document.getElementById('pago');
+const archivos=document.getElementById('imagenes').files;
+
+if(!nombre||!tipo||!direccion||!precio||!horario||!pago)return alert("Completa todo");
+if(archivos.length>5)return alert("Máx 5 imágenes");
+
+const fotos=await convertirImagenes(archivos);
+
+locales.push({
+nombre,tipo,precio,horario,cal:0,dist,pago:"Nuevo",comentarios:[],
+fotos:fotos.length?fotos:["https://via.placeholder.com/100"]
+});
+
+guardarEnStorage();
+cerrarModal();
+renderLocales();
+}
+
+// ================== DETALLE ==================
+function mostrarDetalle(i){
+actual=i;
+const local=locales[i];
+
+lista.style.display='none';
+mapa.style.display='block';
+comentariosDiv.style.display='block';
+btnFotos.style.display='inline-block';
+volverBtn.style.display='inline-block';
+
+setTimeout(()=>{
+  map.invalidateSize();
+
+  if(local.lat && local.lng){
+    map.setView([local.lat, local.lng], 16);
+  }
+
+},100);
+mostrarComentarios();
+}
+
+function mostrarComentarios(){
+const local=locales[actual];
+comentariosDiv.innerHTML="";
+
+const h3=document.createElement('h3');
+h3.textContent=local.nombre;
+comentariosDiv.appendChild(h3);
+
+const starsDiv=document.createElement('div');
+for(let i=0;i<5;i++){
+const span=document.createElement('span');
+span.textContent=i<Math.round(local.cal)?"⭐":"☆";
+span.onclick=()=>{local.cal=i+1;guardarEnStorage();mostrarComentarios();renderLocales();};
+starsDiv.appendChild(span);
+}
+comentariosDiv.appendChild(starsDiv);
+
+local.comentarios.forEach(c=>{
+const p=document.createElement('p');
+p.textContent="💬 "+c;
+comentariosDiv.appendChild(p);
+});
+
+const textarea=document.createElement('textarea');
+const btn=document.createElement('button');
+btn.textContent="Enviar";
+btn.className="btn";
+btn.onclick=()=>{
+if(!textarea.value)return alert("Escribe algo");
+local.comentarios.push(textarea.value);
+guardarEnStorage();
+mostrarComentarios();
+};
+
+comentariosDiv.appendChild(textarea);
+comentariosDiv.appendChild(btn);
+ // 🔥 BOTÓN DE RUTA (separado y después)
+  const btnRuta=document.createElement('button');
+  btnRuta.textContent="📍 Ver ruta";
+  btnRuta.className="btn";
+
+  btnRuta.onclick=()=>{
+    const local = locales[actual];
+    if(!local.lat || !local.lng){
+      return alert("Este local no tiene ubicación");
+    }
+    trazarRuta(local.lat, local.lng);
+  };
+
+  comentariosDiv.appendChild(btnRuta);
+
+}
+// ================== FOTOS ==================
+btnFotos.onclick=()=>{
+const local=locales[actual];
+fotosDiv.style.display='block';
+cerrarFotos.style.display='inline-block';
+fotosDiv.innerHTML="<h3>Fotos</h3>";
+local.fotos.forEach(f=>{
+const img=document.createElement('img');
+img.src=f;
+img.style.width="100px";
+img.style.margin="5px";
+fotosDiv.appendChild(img);
+});
+};
+
+cerrarFotos.onclick=()=>{
+fotosDiv.style.display='none';
+cerrarFotos.style.display='none';
+};
+
+// ================== VOLVER ==================
+volverBtn.onclick=()=>{
+lista.style.display='grid';
+mapa.style.display='none';
+comentariosDiv.style.display='none';
+fotosDiv.style.display='none';
+btnFotos.style.display='none';
+cerrarFotos.style.display='none';
+volverBtn.style.display='none';
+};
+
+let map = L.map('mapa').setView([19.4326, -96.1332], 13); 
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+//====================== Mostrar Ubicacion en el mapa================
+function mostrarMarcadores(){
+  locales.forEach(local=>{
+    if(local.lat && local.lng){
+      L.marker([local.lat, local.lng]).addTo(map)
+      .bindPopup(`<b>${local.nombre}</b><br>${local.tipo}`);
+    }
+  })
+}
+
+mostrarMarcadores();
+
+let controlRuta = null;
+
+function trazarRuta(destinoLat, destinoLng){
+  if(controlRuta){
+    map.removeControl(controlRuta);
+  }
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+
+    controlRuta = L.Routing.control({
+      waypoints: [
+        L.latLng(userLat, userLng),
+        L.latLng(destinoLat, destinoLng)
+      ],
+      routeWhileDragging: false
+    }).addTo(map);
+
+  }, () => {
+    alert("No se pudo obtener tu ubicación");
+  });
+}
+
+// BOTÓN DE RUTA
+const btnRuta = document.createElement('button');
+btnRuta.textContent = "📍 Ver ruta";
+btnRuta.className = "btn";
+
+btnRuta.onclick = () => {
+  const local = locales[actual];
+
+  if(!local.lat || !local.lng){
+    return alert("Este local no tiene ubicación");
+  }
+
+  trazarRuta(local.lat, local.lng);
+};
+
+comentariosDiv.appendChild(btnRuta);
+</script>
+
+</body>
+</html>
