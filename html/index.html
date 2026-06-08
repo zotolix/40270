@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaborUniversitario</title>
+    
+    <!-- Librerías de Mapas -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+    
+    <!-- Tu CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <button onclick="abrirModal()">
+        <img src="icono.svg" alt="Círculo SVG" width="30" height="30">
+    </button>
+</div>
+
+<div class="main">
+    <header><h1>SaborUniversitario</h1></header>
+    
+    <div class="container">
+        <form class="search-wrapper" id="formBusqueda" onsubmit="ejecutarBusqueda(event)">
+            <span class="icon">🔍</span>
+            <input type="text" id="inputBusqueda" class="search-input" placeholder="Buscar comida...">
+        </form>
+
+        <div class="filter-container" style="position: relative;">
+            <button class="filter-button" onclick="toggleFiltros()">
+                <span class="icon">Filtros ▼</span>
+            </button>
+
+            <div id="panelFiltros" class="panel-filtros-mini" style="display:none;">
+                <h4>Filtrar por:</h4>
+                <div class="filtro-seccion">
+                    <label>Distancia (km)</label>
+                    <select id="filtroDistancia">
+                        <option value="all">Cualquiera</option>
+                        <option value="1">Menos de 1 km</option>
+                        <option value="2">Menos de 2 km</option>
+                    </select>
+                </div>
+                <div class="filtro-seccion">
+                    <label>Estrellas</label>
+                    <select id="filtroEstrellas">
+                        <option value="0">Todas</option>
+                        <option value="4">4+ ⭐</option>
+                        <option value="5">5 ⭐</option>
+                    </select>
+                </div>
+                <div class="filtro-seccion">
+                    <label>Precio</label>
+                    <select id="filtroPrecio">
+                        <option value="all">Todos</option>
+                        <option value="$">$ (Económico)</option>
+                        <option value="$$">$$ (Intermedio)</option>
+                    </select>
+                </div>
+                <button class="btn-aplicar" onclick="aplicarFiltros()">Aplicar</button>
+            </div>
+        </div>
+
+        <div id="lista" class="lista-locales"></div>
+
+        <div id="detalle-contenedor" style="display:none;">
+            <div id="mapa" style="height: 300px; width: 100%; border-radius: 8px;"></div>
+            <div id="comentarios" class="comentarios"></div>
+            <div id="fotos" class="fotos"></div>
+            
+            <div class="botones-control">
+                <button class="btn" id="btnFotos" style="display:none">Ver fotos</button>
+                <button class="btn" id="cerrarFotos" style="display:none">Cerrar fotos</button>
+                <button class="btn volver" id="volverBtn">⬅ Volver</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div id="bloquePassword">
+            <h3>Acceso administrador</h3>
+            <input id="password" type="password" placeholder="Contraseña">
+            <button class="btn" onclick="validarPassword()">Ingresar</button>
+        </div>
+
+        <div id="bloqueFormulario" style="display:none;">
+            <h3>Registrar Local</h3>
+            <input id="nombre" placeholder="Nombre">
+            <input id="tipo" placeholder="Tipo (Ej: Mexicana)">
+            <input id="precio" placeholder="Precio ($)">
+            <input id="horario" placeholder="Horario">
+            <input id="pago" placeholder="Método de pago">
+            <input id="latitud" type="number" step="any" placeholder="Latitud">
+            <input id="longitud" type="number" step="any" placeholder="Longitud">
+            <input type="file" id="imagenes" multiple accept="image/*">
+            <button class="btn" onclick="guardarLocal()">Guardar Local</button>
+ 
+            <input type="file" id="imagenes" multiple accept="image/*">
+            <button class="btn" onclick="guardarLocal()">Guardar Local</button>
+        </div>
+        
+        <button class="btn" onclick="cerrarModal()" style="margin-top:10px;">Cerrar</button>
+    </div>
+</div>
+
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script src="javascript.js"></script>
+</body>
+</html>>
